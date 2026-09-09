@@ -3,7 +3,7 @@ export const config = {
 };
 
 import type { APIRoute } from "astro";
-
+import { env } from "cloudflare:workers";
 import {
   AUDIT_FORM_ELEMENT_ID,
   LEAD_FORM_ELEMENT_ID,
@@ -43,14 +43,12 @@ function matchesEmail(
   );
 }
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request }) => {
   try {
-    const env = (locals as any).runtime?.env as
-      | RuntimeEnv
-      | undefined;
+    const runtimeEnv = env as unknown as RuntimeEnv;
 
-    const webflowToken = env?.WEBFLOW_API_TOKEN;
-    const cleanupSecret = env?.CLEANUP_SECRET;
+    const webflowToken = runtimeEnv.WEBFLOW_API_TOKEN;
+    const cleanupSecret = runtimeEnv.CLEANUP_SECRET;
 
     if (!webflowToken || !cleanupSecret) {
       console.error("Required environment variables are missing.");
