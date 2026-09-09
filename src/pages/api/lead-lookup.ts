@@ -28,8 +28,8 @@ function newestFirst(
   submissions: WebflowSubmission[],
 ): WebflowSubmission[] {
   return [...submissions].sort((a, b) => {
-    const aTime = Date.parse(a.submittedAt ?? "") || 0;
-    const bTime = Date.parse(b.submittedAt ?? "") || 0;
+    const aTime = Date.parse(a.dateSubmitted ?? "") || 0;
+    const bTime = Date.parse(b.dateSubmitted ?? "") || 0;
     return bTime - aTime;
   });
 }
@@ -39,7 +39,7 @@ function matchesEmail(
   email: string,
 ): boolean {
   return (
-    normalizeEmail(submission.fieldData?.work_email) === email
+    normalizeEmail(submission.formResponse?.work_email) === email
   );
 }
 
@@ -101,7 +101,7 @@ export const POST: APIRoute = async ({ request }) => {
      * record. If no usable lead_id exists, create a new one.
      */
     const existingLeadId = String(
-      matchingLeads[0]?.fieldData?.lead_id ?? "",
+      matchingLeads[0]?.formResponse?.lead_id ?? "",
     ).trim();
 
     const leadId =
