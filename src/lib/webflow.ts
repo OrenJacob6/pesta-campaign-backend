@@ -4,8 +4,8 @@ const API_BASE = "https://api.webflow.com/v2";
 
 export type WebflowSubmission = {
   id: string;
-  submittedAt?: string;
-  fieldData?: Record<string, unknown>;
+  dateSubmitted?: string;
+  formResponse?: Record<string, unknown>;
 };
 
 type ListResponse = {
@@ -75,7 +75,7 @@ export async function deleteSubmission(
   submissionId: string,
 ): Promise<void> {
   const response = await fetch(
-    `${API_BASE}/form_submissions/${encodeURIComponent(submissionId)}`,
+    `${API_BASE}/sites/${WEBFLOW_SITE_ID}/form_submissions/${encodeURIComponent(submissionId)}`,
     {
       method: "DELETE",
       headers: headers(token),
