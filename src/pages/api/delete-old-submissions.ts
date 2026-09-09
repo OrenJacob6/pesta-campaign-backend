@@ -3,7 +3,7 @@ export const config = {
 };
 
 import type { APIRoute } from "astro";
-
+import { env } from "cloudflare:workers";
 import { verifyCleanupToken } from "../../lib/cleanup-token";
 import { json } from "../../lib/http";
 import { deleteSubmission } from "../../lib/webflow";
@@ -13,14 +13,12 @@ type RuntimeEnv = {
   CLEANUP_SECRET?: string;
 };
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request }) => {
   try {
-    const env = (locals as any).runtime?.env as
-      | RuntimeEnv
-      | undefined;
-
-    const webflowToken = env?.WEBFLOW_API_TOKEN;
-    const cleanupSecret = env?.CLEANUP_SECRET;
+    const runtimeEnv = env as unknown as RuntimeEnv;
+    
+    const webflowToken = runtimeEnv.WEBFLOW_API_TOKEN;
+    const cleanupSecret = runtimeEnv.CLEANUP_SECRET;
 
     if (!webflowToken || !cleanupSecret) {
       console.error("Required environment variables are missing.");
