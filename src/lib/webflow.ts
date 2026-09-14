@@ -83,24 +83,30 @@ export async function listAllSubmissionsByElement(
 export async function deleteSubmission(
   token: string,
   submissionId: string,
+  siteId: string = WEBFLOW_SITE_ID,
 ): Promise<void> {
   const response = await fetch(
-    `${API_BASE}/sites/${WEBFLOW_SITE_ID}/form_submissions/${encodeURIComponent(submissionId)}`,
+    `${API_BASE}/sites/${siteId}/form_submissions/${encodeURIComponent(
+      submissionId,
+    )}`,
     {
       method: "DELETE",
       headers: headers(token),
     },
   );
 
-  // Treat already-deleted submissions as success so cleanup is idempotent.
+  // Treat already-deleted submissions as success
+  // so cleanup is idempotent.
   if (response.status === 404) {
     return;
   }
 
   if (!response.ok) {
-    const body = await response.text();
+    const body =
+      await response.text();
+
     throw new Error(
-      `Webflow delete submission failed (${response.status}): ${body}`,
+      `Webflow delete submission failed for site ${siteId} (${response.status}): ${body}`,
     );
   }
 }
