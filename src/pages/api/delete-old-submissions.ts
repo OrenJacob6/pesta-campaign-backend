@@ -2,6 +2,11 @@ export const config = {
   runtime: "edge",
 };
 
+import {
+  MAIN_WEBFLOW_SITE_ID,
+  WEBFLOW_SITE_ID,
+} from "../../lib/config";
+
 import type { APIRoute } from "astro";
 import { env } from "cloudflare:workers";
 import { verifyCleanupToken } from "../../lib/cleanup-token";
@@ -63,6 +68,23 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    const siteId =
+      payload.siteId ||
+      WEBFLOW_SITE_ID;
+    
+    if (
+      siteId !== WEBFLOW_SITE_ID &&
+      siteId !== MAIN_WEBFLOW_SITE_ID
+    ) {
+      return json(
+        {
+          error:
+            "Cleanup site is not allowed.",
+        },
+        400,
+      );
+    }
+
     const ids = [
       ...new Set([
         ...payload.leadSubmissionIds,
@@ -80,6 +102,7 @@ export const POST: APIRoute = async ({ request }) => {
       await deleteSubmission(
         webflowToken,
         submissionId,
+        siteId,
       );
       deleted += 1;
     }
