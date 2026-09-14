@@ -7,6 +7,8 @@ import { env } from "cloudflare:workers";
 
 import {
   LEAD_FORM_ELEMENT_ID,
+  MAIN_LEAD_FORM_ELEMENT_ID,
+  MAIN_WEBFLOW_SITE_ID,
 } from "../../lib/config";
 
 import {
@@ -20,6 +22,7 @@ import {
 
 type RuntimeEnv = {
   WEBFLOW_API_TOKEN?: string;
+  MAIN_WEBFLOW_API_TOKEN?: string;
 };
 
 function newestFirst(
@@ -36,6 +39,22 @@ function newestFirst(
   });
 }
 
+function findMatchingLead(
+  submissions: WebflowSubmission[],
+  leadId: string,
+): WebflowSubmission | undefined {
+  return newestFirst(
+    submissions.filter(
+      submission =>
+        String(
+          submission
+            .formResponse
+            ?.lead_id ?? "",
+        ).trim() === leadId,
+    ),
+  )[0];
+}
+
 export const POST: APIRoute = async ({
   request,
 }) => {
@@ -46,9 +65,15 @@ export const POST: APIRoute = async ({
     const webflowToken =
       runtimeEnv.WEBFLOW_API_TOKEN;
 
-    if (!webflowToken) {
+    const mainWebflowToken =
+      runtimeEnv.MAIN_WEBFLOW_API_TOKEN;
+
+    if (
+      !webflowToken ||
+      !mainWebflowToken
+    ) {
       console.error(
-        "WEBFLOW_API_TOKEN is missing."
+        "Required Webflow API tokens are missing.",
       );
 
       return json(
@@ -75,7 +100,8 @@ export const POST: APIRoute = async ({
     } catch {
       return json(
         {
-          error: "Invalid JSON body.",
+          error:
+            "Invalid JSON body.",
         },
         400,
       );
@@ -89,46 +115,57 @@ export const POST: APIRoute = async ({
     if (!leadId) {
       return json(
         {
-          error: "lead_id is required.",
+          error:
+            "lead_id is required.",
         },
         400,
       );
     }
 
     /*
-     * Get Lead Details submissions
+     * Search Lead Details on both sites.
      */
-    const submissions =
-      await listAllSubmissionsByElement(
+    const [
+      campaignSubmissions,
+      mainSubmissions,
+    ] = await Promise.all([
+      listAllSubmissionsByElement(
         webflowToken,
         LEAD_FORM_ELEMENT_ID,
-      );
+      ),
+
+      listAllSubmissionsByElement(
+        mainWebflowToken,
+        MAIN_LEAD_FORM_ELEMENT_ID,
+        MAIN_WEBFLOW_SITE_ID,
+      ),
+    ]);
 
     /*
-     * Find matching lead_id.
-     *
-     * newestFirst is defensive in case
-     * historical duplicates ever exist.
+     * Prefer promo if the same global lead_id
+     * exists on both sites.
      */
-    const matchingLeads =
-      newestFirst(
-        submissions.filter(
-          submission =>
-            String(
-              submission
-                .formResponse
-                ?.lead_id ?? "",
-            ).trim() === leadId,
-        ),
+    const campaignLead =
+      findMatchingLead(
+        campaignSubmissions,
+        leadId,
+      );
+
+    const mainLead =
+      findMatchingLead(
+        mainSubmissions,
+        leadId,
       );
 
     const lead =
-      matchingLeads[0];
+      campaignLead ||
+      mainLead;
 
     if (!lead) {
       return json(
         {
-          error: "Lead not found.",
+          error:
+            "Lead not found.",
         },
         404,
       );
