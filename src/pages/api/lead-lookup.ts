@@ -7,6 +7,9 @@ import { env } from "cloudflare:workers";
 import {
   AUDIT_FORM_ELEMENT_ID,
   LEAD_FORM_ELEMENT_ID,
+  MAIN_LEAD_FORM_ELEMENT_ID,
+  MAIN_WEBFLOW_SITE_ID,
+  WEBFLOW_SITE_ID,
 } from "../../lib/config";
 import {
   isValidEmail,
@@ -58,10 +61,17 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    let body: { email?: unknown };
+    let body: {
+      email?: unknown;
+      source?: unknown;
+    };
 
     try {
-      body = (await request.json()) as { email?: unknown };
+      body =
+        (await request.json()) as {
+          email?: unknown;
+          source?: unknown;
+        };
     } catch {
       return json({ error: "Invalid JSON body." }, 400);
     }
@@ -112,19 +122,37 @@ export const POST: APIRoute = async ({ request }) => {
      * This also cleans up historical duplicates safely after the two new
      * submissions have both succeeded.
      */
-    const leadSubmissionIds = matchingLeads.map(
-      (submission) => submission.id,
-    );
+const leadSubmissionIds =
+  source === "main"
+    ? matchingMainLeads.map(
+        submission =>
+          submission.id,
+      )
+    : matchingCampaignLeads.map(
+        submission =>
+          submission.id,
+      );
 
-    const auditSubmissionIds = matchingAudits.map(
-      (submission) => submission.id,
-    );
+const auditSubmissionIds =
+  source === "promo"
+    ? matchingAudits.map(
+        submission =>
+          submission.id,
+      )
+    : [];
 
-    const cleanupToken = await createCleanupToken(
-      cleanupSecret,
-      leadSubmissionIds,
-      auditSubmissionIds,
-    );
+const cleanupSiteId =
+  source === "main"
+    ? MAIN_WEBFLOW_SITE_ID
+    : WEBFLOW_SITE_ID;
+
+const cleanupToken =
+  await createCleanupToken(
+    cleanupSecret,
+    leadSubmissionIds,
+    auditSubmissionIds,
+    cleanupSiteId,
+  );
 
     return json({
       lead_id: leadId,
