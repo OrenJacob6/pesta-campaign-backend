@@ -27,6 +27,7 @@ function headers(token: string): HeadersInit {
 export async function listAllSubmissionsByElement(
   token: string,
   elementId: string,
+  siteId: string = WEBFLOW_SITE_ID,
 ): Promise<WebflowSubmission[]> {
   const results: WebflowSubmission[] = [];
   const limit = 100;
@@ -34,7 +35,7 @@ export async function listAllSubmissionsByElement(
 
   while (true) {
     const url = new URL(
-      `${API_BASE}/sites/${WEBFLOW_SITE_ID}/form_submissions`,
+      `${API_BASE}/sites/${siteId}/form_submissions`,
     );
 
     url.searchParams.set("elementId", elementId);
@@ -48,19 +49,28 @@ export async function listAllSubmissionsByElement(
 
     if (!response.ok) {
       const body = await response.text();
+
       throw new Error(
-        `Webflow list submissions failed (${response.status}): ${body}`,
+        `Webflow list submissions failed for site ${siteId} (${response.status}): ${body}`,
       );
     }
 
-    const data = (await response.json()) as ListResponse;
-    const page = data.formSubmissions ?? [];
+    const data =
+      (await response.json()) as ListResponse;
+
+    const page =
+      data.formSubmissions ?? [];
 
     results.push(...page);
 
-    const total = data.pagination?.total ?? results.length;
+    const total =
+      data.pagination?.total ??
+      results.length;
 
-    if (results.length >= total || page.length < limit) {
+    if (
+      results.length >= total ||
+      page.length < limit
+    ) {
       break;
     }
 
