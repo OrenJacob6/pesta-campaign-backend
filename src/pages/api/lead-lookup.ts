@@ -30,6 +30,7 @@ import {
 
 type RuntimeEnv = {
   WEBFLOW_API_TOKEN?: string;
+  MAIN_WEBFLOW_API_TOKEN?: string;
   CLEANUP_SECRET?: string;
 };
 
@@ -83,11 +84,15 @@ export const POST: APIRoute =
       const webflowToken =
         runtimeEnv.WEBFLOW_API_TOKEN;
 
+      const mainWebflowToken =
+        runtimeEnv.MAIN_WEBFLOW_API_TOKEN;
+
       const cleanupSecret =
         runtimeEnv.CLEANUP_SECRET;
 
       if (
         !webflowToken ||
+        !mainWebflowToken ||
         !cleanupSecret
       ) {
         console.error(
@@ -138,8 +143,8 @@ export const POST: APIRoute =
       }
 
       /*
-       * Existing Audit code does not send a source,
-       * so default to promo.
+       * Existing promo flow does not send source,
+       * so default to "promo".
        */
       const source =
         body.source === undefined
@@ -161,7 +166,7 @@ export const POST: APIRoute =
 
       /*
        * Search both Lead Details sources,
-       * plus the Audit form on promo.
+       * plus Audit submissions on promo.
        */
       const [
         campaignLeadSubmissions,
@@ -174,7 +179,7 @@ export const POST: APIRoute =
         ),
 
         listAllSubmissionsByElement(
-          webflowToken,
+          mainWebflowToken,
           MAIN_LEAD_FORM_ELEMENT_ID,
           MAIN_WEBFLOW_SITE_ID,
         ),
@@ -221,8 +226,8 @@ export const POST: APIRoute =
       /*
        * Global stable lead_id.
        *
-       * Prefer promo if both sites somehow
-       * already contain different IDs.
+       * If both sites already contain different
+       * IDs for the same email, promo is canonical.
        */
       const campaignLeadId =
         findExistingLeadId(
@@ -240,8 +245,8 @@ export const POST: APIRoute =
         crypto.randomUUID();
 
       /*
-       * Cleanup only records belonging
-       * to the site that initiated the flow.
+       * Cleanup only submissions belonging
+       * to the site that initiated this flow.
        */
       const leadSubmissionIds =
         source === "main"
