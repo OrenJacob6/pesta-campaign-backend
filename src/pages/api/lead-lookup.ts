@@ -75,6 +75,41 @@ function findExistingLeadId(
   return "";
 }
 
+const CAMPAIGN_ATTRIBUTION_FIELDS = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_term",
+  "utm_content",
+  "gclid",
+  "fbclid",
+  "_fbc",
+  "_fbp",
+  "landing_page_url",
+  "referrer",
+] as const;
+
+type CampaignAttribution = Record<
+  (typeof CAMPAIGN_ATTRIBUTION_FIELDS)[number],
+  string
+>;
+
+function getCampaignAttribution(
+  submission: WebflowSubmission,
+): CampaignAttribution {
+  const response =
+    submission.formResponse ?? {};
+
+  return Object.fromEntries(
+    CAMPAIGN_ATTRIBUTION_FIELDS.map(field => [
+      field,
+      typeof response[field] === "string"
+        ? response[field]
+        : "",
+    ]),
+  ) as CampaignAttribution;
+}
+
 export const POST: APIRoute =
   async ({ request }) => {
     try {
@@ -201,6 +236,9 @@ export const POST: APIRoute =
           ),
         );
 
+      const existingCampaignLead =
+        matchingCampaignLeads[0] ?? null;
+
       const matchingMainLeads =
         newestFirst(
           mainLeadSubmissions.filter(
@@ -283,6 +321,20 @@ export const POST: APIRoute =
       return json({
         lead_id: leadId,
         cleanup_token: cleanupToken,
+      
+        ...(source === "promo"
+          ? {
+              campaign_lead_exists:
+                Boolean(existingCampaignLead),
+      
+              campaign_attribution:
+                existingCampaignLead
+                  ? getCampaignAttribution(
+                      existingCampaignLead,
+                    )
+                  : null,
+            }
+          : {}),
       });
     } catch (error) {
       console.error(
